@@ -131,6 +131,102 @@ pnpm build        # production build of the web app
 
 If pnpm says some build scripts were ignored, run `pnpm approve-builds` and allow `esbuild` and `workerd`.
 
+## Verification flow (through Day 2)
+
+The API runs locally on Cloudflare's Workers runtime with a local D1 database. You do not need a deployed backend or external API credentials. Start both servers from the repository root and keep the terminal open; the API applies local migrations before it starts.
+
+```bash
+pnpm install
+pnpm dev
+```
+
+### 1. Check that both servers are ready
+
+- The API terminal should show that the D1 migration completed and Wrangler is listening on `127.0.0.1:8787`.
+- Vite should show its local URL, normally `http://localhost:5173/`.
+- Open `http://127.0.0.1:8787/api/health` directly. Expected response: `{"status":"ok"}`.
+- Open the Vite URL and confirm the “Split bills, simply” home page appears.
+
+The app does not currently include a Swagger/API explorer. Use the web page for the normal flow, or the PowerShell requests below to call the API directly. The browser app sends its `/api/...` requests through Vite's proxy to the local API.
+
+### 2. Walk through the app in the browser
+
+1. On the start page, create a home named `Day 2 walkthrough`. The app should open the new home. Copy its displayed **Home ID** if you want to open it again later.
+2. Confirm the empty state asks you to add a member and does not offer bill creation yet.
+3. Add `Asha`, then `Ben`, then `Chitra`, in that order. Confirm all three appear in Outstanding with `$0.00`.
+4. Add a bill titled `Electricity` with **1000 cents**. Confirm its shares are `Asha $3.34`, `Ben $3.33`, and `Chitra $3.33`, and their outstanding balances match.
+5. Pay Asha’s share. Confirm the button enters its loading state, then the server refresh changes the share to Paid and Asha’s outstanding balance to `$0.00`.
+6. Refresh the browser page. Confirm the home, bill, paid share, and balances still match. Local D1 data persists between server restarts unless you explicitly remove the local Wrangler state.
+7. From the start page, paste the copied Home ID into **Open a home** to confirm that opening an existing home works.
+
+### 3. Smoke-test the API directly (Windows PowerShell)
+
+Leave `pnpm dev` running in its terminal. In a second PowerShell terminal, run these requests from any directory. They create a separate test home in your local D1 database.
+
+```powershell
+$base = 'http://127.0.0.1:8787/api'
+$createdHome = Invoke-RestMethod -Method Post -Uri "$base/homes" `
+  -ContentType 'application/json' -Body (@{ name = 'PowerShell smoke test' } | ConvertTo-Json)
+
+$members = foreach ($name in @('Asha', 'Ben', 'Chitra')) {
+  Invoke-RestMethod -Method Post -Uri "$base/homes/$($createdHome.id)/members" `
+    -ContentType 'application/json' -Body (@{ name = $name } | ConvertTo-Json)
+}
+
+$bill = Invoke-RestMethod -Method Post -Uri "$base/homes/$($createdHome.id)/bills" `
+  -ContentType 'application/json' -Body (@{ title = 'Electricity'; totalCents = 1000 } | ConvertTo-Json)
+
+$bill.shares | Select-Object memberId, amountCents, paidAt
+($bill.shares.amountCents | Measure-Object -Sum).Sum
+Invoke-RestMethod -Uri "$base/homes/$($createdHome.id)"
+Invoke-RestMethod -Uri "$base/homes/$($createdHome.id)/bills"
+Invoke-RestMethod -Uri "$base/homes/$($createdHome.id)/balances"
+```
+
+Expected: the share amounts are `334`, `333`, `333`; their sum is `1000`; `paidAt` starts as null; and the GET endpoints return the home with its ordered members, its bill with shares, and three balances of `334`, `333`, `333`.
+
+To confirm payment retries are idempotent, send the same key twice for the same share:
+
+```powershell
+$share = $bill.shares[0]
+$key = [guid]::NewGuid().ToString()
+$payUri = "$base/bills/$($bill.id)/shares/$($share.id)/pay"
+$firstPayment = Invoke-RestMethod -Method Post -Uri $payUri -Headers @{ 'Idempotency-Key' = $key }
+$retryPayment = Invoke-RestMethod -Method Post -Uri $payUri -Headers @{ 'Idempotency-Key' = $key }
+$firstPayment
+$retryPayment
+if ($firstPayment.paidAt -ne $retryPayment.paidAt) { throw 'Idempotent retry returned a different payment result.' }
+```
+
+Both responses should have the same share ID and `paidAt`. Use the refreshed balances endpoint to confirm only that share was removed from the outstanding amount.
+
+### 4. Run the automated Day 1–2 checks
+
+From the repository root, run:
+
+```bash
+pnpm check
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+These are repeatable checks; you do not need to create test homes manually first. `api/test/edge-cases.test.ts` checks split totals and remainder distribution, zero-cent shares, parallel payments, idempotency, unusual inputs, and JSON errors. `api/test/constraints.test.ts` checks that the database rejects invalid rows. `api/test/read-endpoints.test.ts` checks the home, bill, and balance reads. `web/src/components/ShareRow.test.tsx` checks failed and pending payments, retrying with the same key, and server-confirmed paid status.
+
+### 5. Verify an API outage without losing the web page
+
+For this check, start the servers separately in two terminals instead of using the combined `pnpm dev` command:
+
+```bash
+# Terminal 1, repository root
+pnpm --filter bill-splitter-api dev
+
+# Terminal 2, repository root
+pnpm --filter bill-splitter-web dev
+```
+
+Open a home that already has an unpaid share, stop only the API with Ctrl+C in Terminal 1, and try to pay that share. The page should remain usable, keep the share Unpaid, and show a network error rather than crashing or claiming the payment succeeded. Restart the API with the same command and retry; the app should refresh from server data. To verify the loading state, click Pay while the API is still running and observe the button change to “Paying…”.
+
 When you change `api/wrangler.jsonc`, refresh the `Env` types:
 
 ```bash
