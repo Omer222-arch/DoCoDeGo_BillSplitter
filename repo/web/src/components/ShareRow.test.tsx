@@ -53,6 +53,12 @@ async function clickPay() {
 }
 
 describe('ShareRow payment states', () => {
+  it('exposes the member name as the row header', () => {
+    renderRow(unpaid)
+
+    expect(screen.getByRole('rowheader', { name: 'Asha' })).toBeTruthy()
+  })
+
   it('keeps the share unpaid and shows the error when the server answers 500', async () => {
     fetchMock.mockResolvedValue(json(500, { error: 'Internal server error' }))
     const { onSettled } = renderRow(unpaid)

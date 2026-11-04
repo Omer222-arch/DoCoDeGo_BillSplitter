@@ -42,7 +42,7 @@ export function ShareRow({ billId, share, name, onSettled }: Props) {
 
   return (
     <tr>
-      <td>{name}</td>
+      <th scope="row">{name}</th>
       <td>{formatCents(share.amountCents)}</td>
       <td>{paid ? 'Paid' : 'Unpaid'}</td>
       <td>

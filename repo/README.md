@@ -120,7 +120,7 @@ Open http://localhost:5173 to create or open a home, add members, split bills, a
 If the web app reports a `502` while calling `/api/...`, check that the API terminal completed the D1 migration and reports Wrangler listening on `127.0.0.1:8787`. You can verify it directly at http://127.0.0.1:8787/api/health; restart `pnpm dev` if it does not return `{ "status": "ok" }`. If port 8787 is already in use, stop the existing API dev process before restarting; the dev script now fails clearly instead of letting Wrangler silently choose a different port.
 
 ```bash
-pnpm test         # run the visible tests in api/test
+pnpm test         # run API and web tests
 pnpm check        # Biome: format and lint. Must pass.
 pnpm check:fix    # fix what Biome can fix
 pnpm typecheck    # tsc on both packages. Must pass.
@@ -131,7 +131,7 @@ pnpm build        # production build of the web app
 
 If pnpm says some build scripts were ignored, run `pnpm approve-builds` and allow `esbuild` and `workerd`.
 
-## Verification flow (through Day 2)
+## Local verification flow
 
 The API runs locally on Cloudflare's Workers runtime with a local D1 database. You do not need a deployed backend or external API credentials. Start both servers from the repository root and keep the terminal open; the API applies local migrations before it starts.
 
@@ -259,3 +259,13 @@ We will run `pnpm install && pnpm check && pnpm typecheck && pnpm test` on your 
 1. **Represent money as integer cents.** This avoids floating-point rounding in validation, splitting, and balances.
 2. **Assign remainder cents by member creation order.** Every split sums exactly to the bill total, and the result is predictable.
 3. **Treat server data as the source of truth for payments.** A share stays unpaid in the UI until refreshed server data confirms it; retrying reuses the same idempotency key.
+
+## Accessibility
+
+- Both pages provide a keyboard-visible skip link to the main content.
+- Bill shares use captions, column headers, and row headers so table relationships are announced by screen readers.
+- Focus indicators remain visible, and reduced-motion preferences are respected.
+
+## AI use
+
+OpenAI Copilot SDK in VS Code was used to interpret the supplied blueprint, implement this Day 3 accessibility and documentation pass, and run the project checks. Review and understand all changes before submission.

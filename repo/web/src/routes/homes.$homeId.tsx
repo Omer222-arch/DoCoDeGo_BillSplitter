@@ -101,6 +101,9 @@ function HomePage() {
 
   return (
     <main className="shell">
+      <a className="skip-link" href="#balances">
+        Skip to main content
+      </a>
       <header className="page-header home-heading">
         <Link to="/" className="back-link">
           ← All homes
@@ -114,7 +117,9 @@ function HomePage() {
 
       <div className="panel-grid">
         <section className="panel" aria-labelledby="balances">
-          <h2 id="balances">Outstanding balances</h2>
+          <h2 id="balances" tabIndex={-1}>
+            Outstanding balances
+          </h2>
           {balances.length === 0 ? (
             <p className="muted">Add your first member to get started.</p>
           ) : (
@@ -229,6 +234,15 @@ function BillCard({ bill, names }: { bill: Bill; names: Map<string, string> }) {
         {bill.title} · {formatCents(bill.totalCents)}
       </h3>
       <table>
+        <caption className="visually-hidden">{bill.title} shares</caption>
+        <thead>
+          <tr>
+            <th scope="col">Member</th>
+            <th scope="col">Share</th>
+            <th scope="col">Payment status</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
         <tbody>
           {bill.shares.map((share) => (
             <ShareRow

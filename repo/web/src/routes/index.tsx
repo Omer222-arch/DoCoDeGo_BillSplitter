@@ -39,6 +39,9 @@ function Home() {
 
   return (
     <main className="shell">
+      <a className="skip-link" href="#create-home-heading">
+        Skip to main content
+      </a>
       <header className="page-header">
         <p className="eyebrow">Shared home expenses</p>
         <h1>Split bills, simply.</h1>
@@ -49,7 +52,9 @@ function Home() {
 
       <div className="panel-grid">
         <section className="panel" aria-labelledby="create-home-heading">
-          <h2 id="create-home-heading">Start a home</h2>
+          <h2 id="create-home-heading" tabIndex={-1}>
+            Start a home
+          </h2>
           <p className="muted">Give your shared space a name. You can add members next.</p>
           <form onSubmit={createHome} className="stack">
             <label>

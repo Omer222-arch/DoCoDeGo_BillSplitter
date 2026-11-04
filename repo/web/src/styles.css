@@ -5,6 +5,7 @@
   background: #f4f7f4;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  --motion-duration: 120ms;
 }
 
 * {
@@ -32,8 +33,8 @@ button {
   cursor: pointer;
   font-weight: 650;
   transition:
-    background-color 120ms ease,
-    transform 120ms ease;
+    background-color var(--motion-duration) ease,
+    transform var(--motion-duration) ease;
 }
 
 button:hover:not(:disabled) {
@@ -48,13 +49,40 @@ button:disabled {
 
 button:focus-visible,
 input:focus-visible,
-a:focus-visible {
+a:focus-visible,
+h2:focus-visible {
   outline: 3px solid #9bddb8;
   outline-offset: 2px;
 }
 
 a {
   color: #126344;
+}
+
+.skip-link {
+  position: absolute;
+  z-index: 1;
+  top: 0.75rem;
+  left: 0.75rem;
+  transform: translateY(-200%);
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  color: #fff;
+  background: #105f3e;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
 .shell {
@@ -285,7 +313,23 @@ input::placeholder {
   text-align: left;
 }
 
-.bills-section td:last-child {
+.bills-section th {
+  border-top: 1px solid #edf1ed;
+  padding: 0.8rem 1.2rem;
+  text-align: left;
+}
+
+.bills-section thead th {
+  color: #526158;
+  font-size: 0.82rem;
+}
+
+.bills-section tbody th {
+  font-weight: 600;
+}
+
+.bills-section td:last-child,
+.bills-section th:last-child {
   width: 1%;
   white-space: nowrap;
 }
@@ -308,8 +352,15 @@ input::placeholder {
     grid-template-columns: 1fr;
   }
 
-  .bills-section td {
+  .bills-section td,
+  .bills-section th {
     padding: 0.7rem 0.6rem;
     font-size: 0.88rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration: 0ms;
   }
 }
